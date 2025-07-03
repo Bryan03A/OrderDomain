@@ -51,8 +51,8 @@ Base.metadata.create_all(bind=engine)
 app = FastAPI()
 
 origins = [
-    "http://3.212.132.24:8080",  # Permite solicitudes desde la interfaz (puerto 8080)
-    "http://34.228.5.25:5007",
+    "http://3.227.120.143:8080",  # Permite solicitudes desde la interfaz (puerto 8080)
+    "http://3.224.44.87:5007",
 ]
 
 # Agregar el middleware CORS
