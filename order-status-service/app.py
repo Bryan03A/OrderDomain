@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
 # Configuración de la base de datos
-DB_URL = "postgresql://postgres.imfqyzgimtercyyqeqof:1997Guallaba@aws-0-us-west-1.pooler.supabase.com:6543/postgres"
+DB_URL = "postgresql://admin:admin123@35.168.99.213:5432/mydb"
 engine = create_engine(DB_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
