@@ -14,8 +14,8 @@ import (
 )
 
 var (
-	POSTGRES_URI = "postgresql://postgres.imfqyzgimtercyyqeqof:1997Guallaba@aws-0-us-west-1.pooler.supabase.com:6543/postgres"
-	CATALOG_URL  = "http://34.200.3.211:5003/models/id/" // URL base del servicio catalog-service
+	POSTGRES_URI = "postgresql://admin:admin123@35.168.99.213:5432/mydb"
+	CATALOG_URL  = "http://54.90.161.226/catalog/models/id/" // URL base del servicio catalog-service
 )
 
 type Order struct {
