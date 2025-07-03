@@ -14,7 +14,7 @@ import (
 )
 
 var (
-	POSTGRES_URI = "postgresql://admin:admin123@35.168.99.213:5432/mydb"
+	POSTGRES_URI = "postgresql://admin:admin123@35.168.99.213:5432/mydb?sslmode=disable"
 	CATALOG_URL  = "http://54.90.161.226/catalog/models/id/" // URL base del servicio catalog-service
 )
 
