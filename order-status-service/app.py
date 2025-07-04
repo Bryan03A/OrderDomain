@@ -74,19 +74,6 @@ def get_db():
     finally:
         db.close()
 
-# Función para extraer y decodificar token
-def get_token_payload(request: Request):
-    auth_header = request.headers.get("Authorization")
-    if not auth_header or not auth_header.startswith("Bearer "):
-        raise HTTPException(status_code=403, detail="Token missing or invalid")
-
-    token = auth_header.split(" ")[1]
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=['HS256'])
-        return payload
-    except JWTError:
-        raise HTTPException(status_code=403, detail="Invalid token")
-
 @app.post("/orders/")
 def create_order(order_data: OrderCreate, db: Session = Depends(get_db)):
     existing_order = db.query(Order).filter(Order.order_id == order_data.order_id).first()
@@ -121,46 +108,38 @@ def get_order_status(order_id: int, db: Session = Depends(get_db)):
     }
 
 @app.put("/orders/{order_id}/update")
-def update_order(order_id: int, update_data: OrderUpdate, request: Request, db: Session = Depends(get_db)):
+def update_order(order_id: int, update_data: OrderUpdate, db: Session = Depends(get_db)):
     order = db.query(Order).filter(Order.order_id == order_id).first()
     if not order:
         raise HTTPException(status_code=404, detail="Orden no encontrada")
 
-    payload = get_token_payload(request)
-    username = payload.get("username")
-
-    # Logs para debug
-    print("🔐 Token payload:", payload)
-    print("📦 Update data:", update_data.dict())
-    print("📋 Order in DB:", {
-        "created_by": order.created_by,
-        "requester_id": order.requester_id
-    })
-
-    # Validaciones de orden lógica
+    # Verificación de las condiciones para bloquear la actualización de los estados
     if order.accepted and update_data.state_type == "requested":
-        raise HTTPException(status_code=400, detail="No se puede modificar 'requested' después de que 'accepted' sea True")
+        raise HTTPException(status_code=400, detail="No se puede modificar el estado 'requested' después de que 'accepted' sea true")
+    
     if order.completed and update_data.state_type == "accepted":
-        raise HTTPException(status_code=400, detail="No se puede modificar 'accepted' después de que 'completed' sea True")
+        raise HTTPException(status_code=400, detail="No se puede modificar el estado 'accepted' después de que 'completed' sea true")
+    
     if order.paid and update_data.state_type == "completed":
-        raise HTTPException(status_code=400, detail="No se puede modificar 'completed' después de que 'paid' sea True")
+        raise HTTPException(status_code=400, detail="No se puede modificar el estado 'completed' después de que 'paid' sea true")
+    
     if order.alert and update_data.state_type == "paid":
-        raise HTTPException(status_code=400, detail="No se puede modificar 'paid' después de que 'alert' sea True")
+        raise HTTPException(status_code=400, detail="No se puede modificar el estado 'paid' después de que 'alert' sea true")
 
-    # Control de acceso basado en username
+    # Lógica para actualizar el estado según el tipo
     if update_data.state_type == "alert":
         order.alert = update_data.new_value
-    elif update_data.state_type == "requested" and username == order.requester_id:
+    elif update_data.state_type == "requested" and update_data.user_id == order.requester_id:
         order.requested = update_data.new_value
-    elif update_data.state_type == "accepted" and username == order.created_by:
+    elif update_data.state_type == "accepted" and update_data.user_id == order.created_by:
         if not order.requested:
             raise HTTPException(status_code=400, detail="No puedes aceptar antes de que sea solicitado")
         order.accepted = update_data.new_value
-    elif update_data.state_type == "completed" and username == order.created_by:
+    elif update_data.state_type == "completed" and update_data.user_id == order.created_by:
         if not order.accepted:
             raise HTTPException(status_code=400, detail="No puedes completar antes de que sea aceptado")
         order.completed = update_data.new_value
-    elif update_data.state_type == "paid" and username == order.requester_id:
+    elif update_data.state_type == "paid" and update_data.user_id == order.requester_id:
         if not order.completed:
             raise HTTPException(status_code=400, detail="No puedes pagar antes de que sea completado")
         order.paid = update_data.new_value
@@ -169,7 +148,7 @@ def update_order(order_id: int, update_data: OrderUpdate, request: Request, db: 
 
     db.commit()
     db.refresh(order)
-    return {"message": f"Estado '{update_data.state_type}' actualizado", "order": order}
+    return {"message": f"Estado {update_data.state_type} actualizado", "order": order}
 
 if __name__ == "__main__":
     uvicorn.run("app:app", host="0.0.0.0", port=5017, reload=True)
