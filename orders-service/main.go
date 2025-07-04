@@ -14,8 +14,8 @@ import (
 )
 
 var (
-	POSTGRES_URI = "postgresql://admin:admin123@35.168.99.213:5432/mydb?sslmode=disable"
-	CATALOG_URL  = "http://54.90.161.226/catalog/models/id/"
+	POSTGRES_URI = "postgresql://admin:admin123@23.23.135.253:5432/mydb?sslmode=disable"
+	CATALOG_URL  = "http://3.224.44.87/catalog/models/id/"
 )
 
 type Order struct {
