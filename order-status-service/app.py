@@ -29,7 +29,7 @@ class OrderStatus(BaseModel):
     alert: bool
 
 class OrderUpdate(BaseModel):
-    user_id: str
+    username: str
     new_value: bool
     state_type: str
 
