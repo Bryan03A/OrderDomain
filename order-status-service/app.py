@@ -29,9 +29,10 @@ class OrderStatus(BaseModel):
     alert: bool
 
 class OrderUpdate(BaseModel):
-    username: str
+    user_id: str
     new_value: bool
     state_type: str
+    username: str 
 
 # Modelo de Orden en PostgreSQL
 class Order(Base):
