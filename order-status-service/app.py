@@ -1,9 +1,8 @@
 import jwt
-from fastapi import FastAPI, HTTPException, Depends, Request
+from fastapi import FastAPI, HTTPException, Depends
 from pydantic import BaseModel
 from sqlalchemy import create_engine, Column, Integer, Boolean, String
 from sqlalchemy.orm import sessionmaker, Session, declarative_base
-from jose import JWTError, jwt
 # from fastapi.middleware.cors import CORSMiddleware  # ⛔ CORS desactivado
 import uvicorn
 
@@ -131,11 +130,11 @@ def update_order(order_id: int, update_data: OrderUpdate, db: Session = Depends(
         order.alert = update_data.new_value
     elif update_data.state_type == "requested" and update_data.user_id == order.requester_id:
         order.requested = update_data.new_value
-    elif update_data.state_type == "accepted" and update_data.user_id == order.created_by:
+    elif update_data.state_type == "accepted" and update_data.username == order.created_by:
         if not order.requested:
             raise HTTPException(status_code=400, detail="No puedes aceptar antes de que sea solicitado")
         order.accepted = update_data.new_value
-    elif update_data.state_type == "completed" and update_data.user_id == order.created_by:
+    elif update_data.state_type == "completed" and update_data.username == order.created_by:
         if not order.accepted:
             raise HTTPException(status_code=400, detail="No puedes completar antes de que sea aceptado")
         order.completed = update_data.new_value
