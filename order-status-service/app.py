@@ -1,5 +1,5 @@
 import jwt
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, Request
 from pydantic import BaseModel
 from sqlalchemy import create_engine, Column, Integer, Boolean, String
 from sqlalchemy.orm import sessionmaker, Session, declarative_base
