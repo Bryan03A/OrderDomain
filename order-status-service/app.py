@@ -7,7 +7,7 @@ from sqlalchemy.orm import sessionmaker, Session, declarative_base
 import uvicorn
 
 # Configuración de la base de datos
-DB_URL = "postgresql://admin:admin123@35.23.23.135.253:5432/mydb"
+DB_URL = "postgresql://admin:admin123@23.23.135.253:5432/mydb"
 engine = create_engine(DB_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
