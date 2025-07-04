@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException, Depends
 from pydantic import BaseModel
 from sqlalchemy import create_engine, Column, Integer, Boolean, String
 from sqlalchemy.orm import sessionmaker, Session, declarative_base
-from fastapi.middleware.cors import CORSMiddleware
+# from fastapi.middleware.cors import CORSMiddleware  # ⛔ CORS desactivado
 import uvicorn
 
 # Configuración de la base de datos
@@ -26,9 +26,9 @@ class OrderStatus(BaseModel):
     alert: bool
 
 class OrderUpdate(BaseModel):
-    user_id: str  # Cambiar de int a str para que acepte UUID
+    user_id: str
     new_value: bool
-    state_type: str  # requested, accepted, completed, paid, alert # requested, accepted, completed, paid, alert
+    state_type: str
 
 # Modelo de Orden en PostgreSQL
 class Order(Base):
@@ -50,19 +50,18 @@ Base.metadata.create_all(bind=engine)
 # Inicializar FastAPI
 app = FastAPI()
 
-origins = [
-    "http://3.227.120.143:8080",  # Permite solicitudes desde la interfaz (puerto 8080)
-    "http://3.224.44.87:5007",
-]
-
-# Agregar el middleware CORS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,  # Permite solo el origen de la interfaz
-    allow_credentials=True,
-    allow_methods=["*"],  # Permite todos los métodos HTTP
-    allow_headers=["*"],  # Permite todos los encabezados
-)
+# 🔒 CORS eliminado porque se maneja en NGINX
+# origins = [
+#     "http://3.227.120.143:8080",
+#     "http://3.224.44.87:5007",
+# ]
+# app.add_middleware(
+#     CORSMiddleware,
+#     allow_origins=origins,
+#     allow_credentials=True,
+#     allow_methods=["*"],
+#     allow_headers=["*"],
+# )
 
 def get_db():
     db = SessionLocal()
@@ -110,20 +109,15 @@ def update_order(order_id: int, update_data: OrderUpdate, db: Session = Depends(
     if not order:
         raise HTTPException(status_code=404, detail="Orden no encontrada")
 
-    # Verificación de las condiciones para bloquear la actualización de los estados
     if order.accepted and update_data.state_type == "requested":
         raise HTTPException(status_code=400, detail="No se puede modificar el estado 'requested' después de que 'accepted' sea true")
-    
     if order.completed and update_data.state_type == "accepted":
         raise HTTPException(status_code=400, detail="No se puede modificar el estado 'accepted' después de que 'completed' sea true")
-    
     if order.paid and update_data.state_type == "completed":
         raise HTTPException(status_code=400, detail="No se puede modificar el estado 'completed' después de que 'paid' sea true")
-    
     if order.alert and update_data.state_type == "paid":
         raise HTTPException(status_code=400, detail="No se puede modificar el estado 'paid' después de que 'alert' sea true")
 
-    # Lógica para actualizar el estado según el tipo
     if update_data.state_type == "alert":
         order.alert = update_data.new_value
     elif update_data.state_type == "requested" and update_data.user_id == order.requester_id:

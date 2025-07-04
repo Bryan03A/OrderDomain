@@ -8,14 +8,14 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/gin-contrib/cors"
+	// "github.com/gin-contrib/cors" // ❌ CORS desactivado
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
 )
 
 var (
 	POSTGRES_URI = "postgresql://admin:admin123@35.168.99.213:5432/mydb?sslmode=disable"
-	CATALOG_URL  = "http://54.90.161.226/catalog/models/id/" // URL base del servicio catalog-service
+	CATALOG_URL  = "http://54.90.161.226/catalog/models/id/"
 )
 
 type Order struct {
@@ -38,31 +38,26 @@ type Model struct {
 	CreatedBy   string `json:"created_by"`
 }
 
-// Función para obtener detalles del modelo desde catalog-service
 func fetchModelDetails(modelID string) (Model, error) {
 	var modelResponse struct {
 		Model Model `json:"model"`
 	}
 
-	// Hacer la petición HTTP a catalog-service
 	resp, err := http.Get(CATALOG_URL + modelID)
 	if err != nil {
 		return Model{}, fmt.Errorf("error requesting model: %v", err)
 	}
 	defer resp.Body.Close()
 
-	// Leer el cuerpo de la respuesta
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return Model{}, fmt.Errorf("error reading response: %v", err)
 	}
 
-	// Si el modelo no se encuentra, devolver vacío
 	if resp.StatusCode != http.StatusOK {
 		return Model{}, fmt.Errorf("model not found")
 	}
 
-	// Parsear JSON
 	if err := json.Unmarshal(body, &modelResponse); err != nil {
 		return Model{}, fmt.Errorf("error parsing JSON: %v", err)
 	}
@@ -70,11 +65,9 @@ func fetchModelDetails(modelID string) (Model, error) {
 	return modelResponse.Model, nil
 }
 
-// Obtener órdenes filtradas por created_by y agregar detalles del modelo
 func GetOrdersByCreatedBy(c *gin.Context) {
-	CreatedBy := c.Param("created_by") // Usamos created_by como parámetro
+	CreatedBy := c.Param("created_by")
 
-	// Conectar a PostgreSQL
 	db, err := sql.Open("postgres", POSTGRES_URI)
 	if err != nil {
 		log.Println("Error opening database connection:", err)
@@ -83,7 +76,6 @@ func GetOrdersByCreatedBy(c *gin.Context) {
 	}
 	defer db.Close()
 
-	// Ejecutar consulta SQL cambiando user_id por created_by
 	rows, err := db.Query("SELECT id, model_id, custom_params, user_id, created_at, cost_initial, cost_final FROM customs WHERE created_by = $1", CreatedBy)
 	if err != nil {
 		log.Println("Error querying database:", err)
@@ -94,7 +86,6 @@ func GetOrdersByCreatedBy(c *gin.Context) {
 
 	var orders []Order
 
-	// Procesar resultados
 	for rows.Next() {
 		var order Order
 		err := rows.Scan(&order.ID, &order.ModelID, &order.CustomParams, &order.UserID, &order.CreatedAt, &order.CostInitial, &order.CostFinal)
@@ -104,7 +95,6 @@ func GetOrdersByCreatedBy(c *gin.Context) {
 			return
 		}
 
-		// Obtener detalles del modelo desde catalog-service
 		modelDetails, err := fetchModelDetails(order.ModelID)
 		if err != nil {
 			log.Println("Model details not found for model_id:", order.ModelID)
@@ -115,30 +105,28 @@ func GetOrdersByCreatedBy(c *gin.Context) {
 		orders = append(orders, order)
 	}
 
-	// Enviar respuesta JSON
 	c.JSON(http.StatusOK, gin.H{"orders": orders})
 }
 
 func main() {
-	// Configurar Gin en modo release
 	gin.SetMode(gin.ReleaseMode)
 
 	router := gin.New()
-
 	router.Use(gin.Logger(), gin.Recovery())
 
-	router.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://3.212.132.24:8080"}, // Permitir solo la interfaz
-		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
-		AllowCredentials: true,
-	}))
+	// ❌ Middleware CORS eliminado
+	/*
+		router.Use(cors.New(cors.Config{
+			AllowOrigins:     []string{"http://3.212.132.24:8080"},
+			AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+			AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+			AllowCredentials: true,
+		}))
+	*/
 
 	router.SetTrustedProxies(nil)
-
 	router.GET("/orders/created_by/:created_by", GetOrdersByCreatedBy)
 
 	log.Println("Server running on port 5018...")
-
 	router.Run("0.0.0.0:5018")
 }
