@@ -82,7 +82,7 @@ def get_token_payload(request: Request):
 
     token = auth_header.split(" ")[1]
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(token, SECRET_KEY, algorithms=['HS256'])
         return payload
     except JWTError:
         raise HTTPException(status_code=403, detail="Invalid token")
