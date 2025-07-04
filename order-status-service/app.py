@@ -3,6 +3,7 @@ from fastapi import FastAPI, HTTPException, Depends, Request
 from pydantic import BaseModel
 from sqlalchemy import create_engine, Column, Integer, Boolean, String
 from sqlalchemy.orm import sessionmaker, Session, declarative_base
+from jose import JWTError, jwt
 # from fastapi.middleware.cors import CORSMiddleware  # ⛔ CORS desactivado
 import uvicorn
 
@@ -73,14 +74,18 @@ def get_db():
     finally:
         db.close()
 
-def verify_token(token: str):
+# Función para extraer y decodificar token
+def get_token_payload(request: Request):
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=403, detail="Token missing or invalid")
+
+    token = auth_header.split(" ")[1]
     try:
-        decoded = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
-        return decoded
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Token expired")
-    except jwt.InvalidTokenError:
-        raise HTTPException(status_code=401, detail="Invalid token")
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        return payload
+    except JWTError:
+        raise HTTPException(status_code=403, detail="Invalid token")
 
 @app.post("/orders/")
 def create_order(order_data: OrderCreate, db: Session = Depends(get_db)):
