@@ -109,6 +109,9 @@ def get_order_status(order_id: int, db: Session = Depends(get_db)):
 
 @app.put("/orders/{order_id}/update")
 def update_order(order_id: int, update_data: OrderUpdate, db: Session = Depends(get_db)):
+    # Log para ver qué datos llegan
+    print(f"Received update request for order {order_id}: {update_data.dict()}")
+
     order = db.query(Order).filter(Order.order_id == order_id).first()
     if not order:
         raise HTTPException(status_code=404, detail="Orden no encontrada")
