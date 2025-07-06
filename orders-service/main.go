@@ -4,16 +4,14 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 
-	// "github.com/gin-contrib/cors" // ❌ Comentado CORS
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
 )
 
-var (
+const (
 	POSTGRES_URI = "postgresql://admin:admin123@23.23.135.253:5432/mydb?sslmode=disable"
 	CATALOG_URL  = "http://50.19.4.172/catalog/models/id/"
 )
@@ -38,71 +36,74 @@ type Model struct {
 	CreatedBy   string `json:"created_by"`
 }
 
+// fetchModelDetails fetches model details from an external service.
 func fetchModelDetails(modelID string) (Model, error) {
-	var modelResponse struct {
-		Model Model `json:"model"`
-	}
-
 	resp, err := http.Get(CATALOG_URL + modelID)
 	if err != nil {
-		return Model{}, fmt.Errorf("error requesting model: %v", err)
+		return Model{}, fmt.Errorf("error requesting model: %w", err)
 	}
 	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return Model{}, fmt.Errorf("error reading response: %v", err)
-	}
-
 	if resp.StatusCode != http.StatusOK {
-		return Model{}, fmt.Errorf("model not found")
+		return Model{}, fmt.Errorf("model not found (status %d)", resp.StatusCode)
 	}
 
-	if err := json.Unmarshal(body, &modelResponse); err != nil {
-		return Model{}, fmt.Errorf("error parsing JSON: %v", err)
+	var result struct {
+		Model Model `json:"model"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return Model{}, fmt.Errorf("error decoding JSON: %w", err)
 	}
 
-	return modelResponse.Model, nil
+	return result.Model, nil
 }
 
-func GetOrdersByUserID(c *gin.Context) {
+// getOrdersByUserID retrieves orders from the database for a specific user.
+func getOrdersByUserID(db *sql.DB, userID string) ([]Order, error) {
+	rows, err := db.Query(`SELECT id, model_id, custom_params, user_id, created_at, cost_initial, cost_final 
+		FROM customs WHERE user_id = $1 AND state = 'required'`, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var orders []Order
+	for rows.Next() {
+		var o Order
+		if err := rows.Scan(&o.ID, &o.ModelID, &o.CustomParams, &o.UserID, &o.CreatedAt, &o.CostInitial, &o.CostFinal); err != nil {
+			return nil, err
+		}
+
+		model, err := fetchModelDetails(o.ModelID)
+		if err == nil {
+			o.ModelDetails = model
+		} else {
+			log.Printf("Warning: no model details for model_id %s: %v", o.ModelID, err)
+		}
+
+		orders = append(orders, o)
+	}
+
+	return orders, nil
+}
+
+// HTTP handler for the /orders/user/:user_id route
+func GetOrdersByUserIDHandler(c *gin.Context) {
 	userID := c.Param("user_id")
 
 	db, err := sql.Open("postgres", POSTGRES_URI)
 	if err != nil {
-		log.Println("Error opening database connection:", err)
+		log.Println("DB connection error:", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database connection failed"})
 		return
 	}
 	defer db.Close()
 
-	rows, err := db.Query("SELECT id, model_id, custom_params, user_id, created_at, cost_initial, cost_final FROM customs WHERE user_id = $1 AND state = 'required'", userID)
+	orders, err := getOrdersByUserID(db, userID)
 	if err != nil {
-		log.Println("Error querying database:", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Query failed"})
+		log.Println("Error fetching orders:", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch orders"})
 		return
-	}
-	defer rows.Close()
-
-	var orders []Order
-
-	for rows.Next() {
-		var order Order
-		err := rows.Scan(&order.ID, &order.ModelID, &order.CustomParams, &order.UserID, &order.CreatedAt, &order.CostInitial, &order.CostFinal)
-		if err != nil {
-			log.Println("Error scanning order:", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error scanning order"})
-			return
-		}
-
-		modelDetails, err := fetchModelDetails(order.ModelID)
-		if err != nil {
-			log.Println("Model details not found for model_id:", order.ModelID)
-		} else {
-			order.ModelDetails = modelDetails
-		}
-
-		orders = append(orders, order)
 	}
 
 	c.JSON(http.StatusOK, gin.H{"orders": orders})
@@ -113,21 +114,12 @@ func main() {
 
 	router := gin.New()
 	router.Use(gin.Logger(), gin.Recovery())
-
-	// ❌ Middleware CORS eliminado
-	/*
-		router.Use(cors.New(cors.Config{
-			AllowOrigins:     []string{"http://3.212.132.24:8080"},
-			AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-			AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
-			AllowCredentials: true,
-		}))
-	*/
-
 	router.SetTrustedProxies(nil)
 
-	router.GET("/orders/user/:user_id", GetOrdersByUserID)
+	router.GET("/orders/user/:user_id", GetOrdersByUserIDHandler)
 
 	log.Println("Server running on port 5008...")
-	router.Run("0.0.0.0:5008")
+	if err := router.Run("0.0.0.0:5008"); err != nil {
+		log.Fatalf("Server error: %v", err)
+	}
 }

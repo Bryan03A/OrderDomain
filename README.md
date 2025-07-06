@@ -60,3 +60,31 @@
   - Logs key operations and errors
 
 ---
+
+## 3  **Order Service** (Go / Gin)
+- **🧠 Purpose**: Manages user orders retrieval from a PostgreSQL database and enriches orders with model details fetched from an external catalog service.
+- **🧪 Port**: `5008`
+- **🧰 Tech Stack**:
+- &nbsp; - Language: Go
+- &nbsp; - Framework: Gin (HTTP web framework)
+- &nbsp; - DB: PostgreSQL (self-hosted)
+- &nbsp; - External Service: REST API for model details
+- **🛢️ Database**:
+- &nbsp; - Type: Relational
+- &nbsp; - Engine: PostgreSQL
+- &nbsp; - Holds order records in the `customs` table
+- **🔐 Security**:
+- &nbsp; - No authentication implemented (public endpoint)
+- &nbsp; - Runs with minimal privileges; database credentials stored in code (consider env vars for prod)
+- **📡 Communication**: REST (JSON)
+- &nbsp; - Fetches model data via HTTP GET from external catalog service
+- **🌍 Endpoints**:
+- &nbsp; - `GET /orders/user/:user_id` — Retrieves all "required" orders for the given user, including enriched model details
+- **🎨 Design Pattern**: `KISS` (Keep It Simple)
+- **🛠️ Notes**:
+- &nbsp; - Separate functions for DB querying and external API calls for clarity and simplicity  
+- &nbsp; - No CORS middleware (commented out)
+- &nbsp; - Logs warnings on missing model details without failing entire request
+- &nbsp; - Uses `database/sql` with Postgres driver and `gin` for HTTP server
+
+---
