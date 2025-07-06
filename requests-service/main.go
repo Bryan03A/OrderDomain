@@ -4,16 +4,14 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 
-	// "github.com/gin-contrib/cors" // ❌ CORS desactivado
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
 )
 
-var (
+const (
 	POSTGRES_URI = "postgresql://admin:admin123@23.23.135.253:5432/mydb?sslmode=disable"
 	CATALOG_URL  = "http://50.19.4.172/catalog/models/id/"
 )
@@ -38,66 +36,74 @@ type Model struct {
 	CreatedBy   string `json:"created_by"`
 }
 
+// openDB opens the database connection and handles common errors
+func openDB() (*sql.DB, error) {
+	db, err := sql.Open("postgres", POSTGRES_URI)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open DB: %w", err)
+	}
+	return db, nil
+}
+
+// fetchModelDetails retrieves the model details by ID from the external service
 func fetchModelDetails(modelID string) (Model, error) {
-	var modelResponse struct {
+	var response struct {
 		Model Model `json:"model"`
 	}
 
 	resp, err := http.Get(CATALOG_URL + modelID)
 	if err != nil {
-		return Model{}, fmt.Errorf("error requesting model: %v", err)
+		return Model{}, fmt.Errorf("request error: %w", err)
 	}
 	defer resp.Body.Close()
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return Model{}, fmt.Errorf("error reading response: %v", err)
-	}
 
 	if resp.StatusCode != http.StatusOK {
 		return Model{}, fmt.Errorf("model not found")
 	}
 
-	if err := json.Unmarshal(body, &modelResponse); err != nil {
-		return Model{}, fmt.Errorf("error parsing JSON: %v", err)
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		return Model{}, fmt.Errorf("decode error: %w", err)
 	}
 
-	return modelResponse.Model, nil
+	return response.Model, nil
 }
 
+// GetOrdersByCreatedBy handles the GET request to fetch orders filtered by created_by
 func GetOrdersByCreatedBy(c *gin.Context) {
-	CreatedBy := c.Param("created_by")
+	createdBy := c.Param("created_by")
 
-	db, err := sql.Open("postgres", POSTGRES_URI)
+	db, err := openDB()
 	if err != nil {
-		log.Println("Error opening database connection:", err)
+		log.Println(err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database connection failed"})
 		return
 	}
 	defer db.Close()
 
-	rows, err := db.Query("SELECT id, model_id, custom_params, user_id, created_at, cost_initial, cost_final FROM customs WHERE created_by = $1", CreatedBy)
+	rows, err := db.Query(`
+		SELECT id, model_id, custom_params, user_id, created_at, cost_initial, cost_final
+		FROM customs
+		WHERE created_by = $1
+	`, createdBy)
 	if err != nil {
-		log.Println("Error querying database:", err)
+		log.Println("DB query error:", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Query failed"})
 		return
 	}
 	defer rows.Close()
 
 	var orders []Order
-
 	for rows.Next() {
 		var order Order
-		err := rows.Scan(&order.ID, &order.ModelID, &order.CustomParams, &order.UserID, &order.CreatedAt, &order.CostInitial, &order.CostFinal)
-		if err != nil {
-			log.Println("Error scanning order:", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error scanning order"})
+		if err := rows.Scan(&order.ID, &order.ModelID, &order.CustomParams, &order.UserID, &order.CreatedAt, &order.CostInitial, &order.CostFinal); err != nil {
+			log.Println("Row scan error:", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error reading orders"})
 			return
 		}
 
 		modelDetails, err := fetchModelDetails(order.ModelID)
 		if err != nil {
-			log.Println("Model details not found for model_id:", order.ModelID)
+			log.Printf("Warning: Model details not found for model_id %s: %v\n", order.ModelID, err)
 		} else {
 			order.ModelDetails = modelDetails
 		}
@@ -113,16 +119,6 @@ func main() {
 
 	router := gin.New()
 	router.Use(gin.Logger(), gin.Recovery())
-
-	// ❌ Middleware CORS eliminado
-	/*
-		router.Use(cors.New(cors.Config{
-			AllowOrigins:     []string{"http://3.212.132.24:8080"},
-			AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-			AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
-			AllowCredentials: true,
-		}))
-	*/
 
 	router.SetTrustedProxies(nil)
 	router.GET("/orders/created_by/:created_by", GetOrdersByCreatedBy)

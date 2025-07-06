@@ -88,3 +88,31 @@
 - &nbsp; - Uses `database/sql` with Postgres driver and `gin` for HTTP server
 
 ---
+
+## 3  **Order Service** (Go / Gin)
+- **🧠 Purpose**: Retrieves user orders filtered by creator, enriches orders with model details fetched from an external catalog service.
+- **🧪 Port**: `5018`
+- **🧰 Tech Stack**:
+- &nbsp; - Language: Go
+- &nbsp; - Framework: Gin (HTTP web framework)
+- &nbsp; - DB: PostgreSQL (Remote instance)
+- &nbsp; - External HTTP service for model details enrichment
+- **🛢️ Database**:
+- &nbsp; - Type: Relational
+- &nbsp; - Engine: PostgreSQL
+- &nbsp; - Hosted remotely (IP: 23.23.135.253)
+- **🔐 Security**:
+- &nbsp; - No explicit authentication or authorization in this microservice (could be added)
+- **📡 Communication**: REST (JSON)
+- &nbsp; - Fetches order data from PostgreSQL
+- &nbsp; - Fetches model details via HTTP GET to external catalog service
+- **🌍 Endpoints**:
+- &nbsp; - `GET /orders/created_by/:created_by` - Returns all orders created by a specific user, including enriched model details.
+- **🎨 Design Pattern**: `KISS` (Keep It Simple)
+- **🛠️ Notes**:
+- &nbsp; - Connection pooling and error handling implemented simply
+- &nbsp; - No middleware for CORS or authentication
+- &nbsp; - Uses a helper function to keep DB connection logic DRY
+- &nbsp; - Logs errors but continues processing to provide partial responses if some model details fail
+
+---
