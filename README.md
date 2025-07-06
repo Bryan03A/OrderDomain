@@ -1,4 +1,20 @@
-## 1️⃣ **Order Status Service** (Python / FastAPI)
+# 🧭 Microservices Architecture Overview
+
+This document provides a high-level overview of each microservice in the system.
+
+## 📌 Includes:
+- 🎯 Purpose
+- 💻 Language & Framework
+- 🔌 Communication Style
+- 🛢️ Database/Storage
+- 🔐 Security Notes
+- 🎨 Design Pattern
+- 🔍 Endpoints
+- ⚙️ Configuration Details
+
+---
+
+## 7️⃣ **Order Status Service** (Python / FastAPI)
 - **🧠 Purpose**: Manages orders and their lifecycle statuses (requested, accepted, completed, paid, alert) with strict state transition rules and role-based permissions.
 - **🧪 Port**: `5017`
 - **🧰 Tech Stack**:
@@ -30,7 +46,7 @@
 
 ---
 
-## 3  **Orders Service** (Go / Gin)
+## 8️⃣ **Orders Service** (Go / Gin)
 - **🧠 Purpose**: Retrieves custom orders for a specific user and fetches associated model details from an external catalog service.
 - **🧪 Port**: `5019`
 - **🧰 Tech Stack**:
@@ -61,7 +77,7 @@
 
 ---
 
-## 3  **Order Service** (Go / Gin)
+## 9️⃣  **Order Service** (Go / Gin)
 - **🧠 Purpose**: Manages user orders retrieval from a PostgreSQL database and enriches orders with model details fetched from an external catalog service.
 - **🧪 Port**: `5008`
 - **🧰 Tech Stack**:
@@ -89,7 +105,7 @@
 
 ---
 
-## 3  **Order Service** (Go / Gin)
+## 🔟  **Order Service** (Go / Gin)
 - **🧠 Purpose**: Retrieves user orders filtered by creator, enriches orders with model details fetched from an external catalog service.
 - **🧪 Port**: `5018`
 - **🧰 Tech Stack**:
