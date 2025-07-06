@@ -10,9 +10,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the source code of the microservice
 COPY . /app/
+COPY app /app
 
-# Expose the port on which the service will run
 EXPOSE 5017
 
-# Command to run the service
-CMD ["python", "app.py"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "5017"]
