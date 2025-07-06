@@ -27,3 +27,36 @@
 - &nbsp; - Uses SQLAlchemy ORM for DB interactions
 - &nbsp; - Dependency injection for DB session and service instances
 - &nbsp; - Designed for maintainability, testability, and clear separation of concerns
+
+---
+
+## 3  **Orders Service** (Go / Gin)
+- **🧠 Purpose**: Retrieves custom orders for a specific user and fetches associated model details from an external catalog service.
+- **🧪 Port**: `5019`
+- **🧰 Tech Stack**:
+  - Language: Go
+  - Framework: Gin
+  - DB: PostgreSQL (external instance)
+  - HTTP Client for catalog model lookup
+- **🛢️ Database**:
+  - Type: Relational
+  - Engine: PostgreSQL
+  - Hosted externally (IP: `23.23.135.253`)
+- **🔐 Security**:
+  - No authentication applied at the service level
+  - Assumes upstream API Gateway or service mesh handles authentication
+- **📡 Communication**: REST (JSON)
+  - Consumes: `GET /orders/user/:user_id`
+  - Calls external API: `GET http://50.19.4.172/catalog/models/id/:model_id`
+- **🌍 Endpoints**:
+  - `GET /orders/user/:user_id`: Returns a list of paid custom orders and enriches each with model metadata
+- **📬 External Dependencies**:
+  - Catalog Service at `50.19.4.172`
+  - PostgreSQL database for retrieving orders
+- **🎨 Design Pattern**: `KISS` (Keep It Simple)
+- **🛠️ Notes**:
+  - Stateless design
+  - CORS is assumed to be handled by NGINX or upstream proxy
+  - Logs key operations and errors
+
+---
