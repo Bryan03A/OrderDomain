@@ -1,0 +1,29 @@
+## 1️⃣ **Order Status Service** (Python / FastAPI)
+- **🧠 Purpose**: Manages orders and their lifecycle statuses (requested, accepted, completed, paid, alert) with strict state transition rules and role-based permissions.
+- **🧪 Port**: `5017`
+- **🧰 Tech Stack**:
+- &nbsp; - Language: Python
+- &nbsp; - Framework: FastAPI
+- &nbsp; - DB: PostgreSQL
+- **🛢️ Database**:
+- &nbsp; - Type: Relational
+- &nbsp; - Engine: PostgreSQL
+- &nbsp; - Hosted on a remote server (configurable via environment variables)
+- **🔐 Security**:
+- &nbsp; - Role-based state update restrictions (requester vs creator)
+- &nbsp; - Validation of allowed state transitions to avoid invalid order lifecycle changes
+- **📡 Communication**: REST (JSON)
+- &nbsp; - Endpoints for creating orders, querying status, and updating order states
+- **🌍 Endpoints**:
+- &nbsp; - `POST /orders/` — Create a new order
+- &nbsp; - `GET /orders/{order_id}/status` — Retrieve current status of an order
+- &nbsp; - `PUT /orders/{order_id}/update` — Update the status of an order with permission and transition checks
+- **🎨 Design Pattern**: `SOLID` principles applied, especially Single Responsibility and Dependency Inversion
+- **🏗️ Architecture**: 3-layer (N-layer) architecture
+- &nbsp; - Presentation Layer (API routes)
+- &nbsp; - Domain Layer (business logic and validation in services)
+- &nbsp; - Data Access Layer (repository pattern for database operations)
+- **🛠️ Notes**:
+- &nbsp; - Uses SQLAlchemy ORM for DB interactions
+- &nbsp; - Dependency injection for DB session and service instances
+- &nbsp; - Designed for maintainability, testability, and clear separation of concerns
